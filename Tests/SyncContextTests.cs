@@ -17,26 +17,19 @@ namespace SyncContext_Bug
         {
             this.RunTestAsync(async () =>
             {
-                try
+                var t1 = InvokeOnDispatcherAsync(ApplicationIdle, () =>
                 {
-                    var t1 = InvokeOnDispatcherAsync(ApplicationIdle, () =>
-                    {
-                        var priority = CurrentPriorityFromSynchronizationContext();
-                        Assert.Equal(ApplicationIdle, priority);
-                    });
+                    var priority = CurrentPriorityFromSynchronizationContext();
+                    Assert.Equal(ApplicationIdle, priority);
+                });
 
-                    var t2 = InvokeOnDispatcherAsync(Render, () =>
-                    {
-                        var priority = CurrentPriorityFromSynchronizationContext();
-                        Assert.Equal(Render, priority);
-                    });
-
-                    await Task.WhenAll(t1, t2);
-                }
-                finally
+                var t2 = InvokeOnDispatcherAsync(Render, () =>
                 {
-                    Dispatcher.CurrentDispatcher.BeginInvokeShutdown(Normal);
-                }
+                    var priority = CurrentPriorityFromSynchronizationContext();
+                    Assert.Equal(Render, priority);
+                });
+
+                await Task.WhenAll(t1, t2);
             });
         }
 
@@ -45,27 +38,20 @@ namespace SyncContext_Bug
         {
             this.RunTestAsync(async () =>
             {
-                try
+                int hitCount = 0;
+                var t1 = InvokeOnDispatcherAsync(ApplicationIdle, () =>
                 {
-                    int hitCount = 0;
-                    var t1 = InvokeOnDispatcherAsync(ApplicationIdle, () =>
-                    {
-                        Assert.Equal(1, hitCount);
-                        hitCount++;
-                    });
+                    Assert.Equal(1, hitCount);
+                    hitCount++;
+                });
 
-                    var t2 = InvokeOnDispatcherAsync(Render, () =>
-                    {
-                        Assert.Equal(0, hitCount);
-                        hitCount++;
-                    });
-
-                    await Task.WhenAll(t1, t2);
-                }
-                finally
+                var t2 = InvokeOnDispatcherAsync(Render, () =>
                 {
-                    Dispatcher.CurrentDispatcher.BeginInvokeShutdown(Normal);
-                }
+                    Assert.Equal(0, hitCount);
+                    hitCount++;
+                });
+
+                await Task.WhenAll(t1, t2);
             });
         }
 
