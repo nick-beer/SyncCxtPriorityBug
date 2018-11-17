@@ -50,14 +50,7 @@ namespace NI.TestUtilities
             {
                 if (instance.GetMixinState<AsyncTestState>().UseLoadContext)
                 {
-                    try
-                    {
-                        ExecuteInNewLoadContext(test);
-                    }
-                    catch (Exception e)
-                    {
-                        ThrowExceptionForCallingLoadContext(e);
-                    }
+                    ExecuteInNewLoadContext(test);
                 }
                 else
                 {
@@ -82,9 +75,10 @@ namespace NI.TestUtilities
 
                     var assembly = context.LoadFromAssemblyPath(GetType().Assembly.Location);
                     var type = assembly.GetType(GetType().FullName);
+                    var instance = Activator.CreateInstance(type);
                     var method = type.GetMethod(nameof(ReflectionRunTestAsync), BindingFlags.NonPublic | BindingFlags.Instance);
 
-                    method.Invoke(null, new object[] { assemblyPath, typeName, methodName });
+                    method.Invoke(instance, new object[] { assemblyPath, typeName, methodName });
                 }
                 finally
                 {
@@ -92,7 +86,7 @@ namespace NI.TestUtilities
                 }
             }
 
-            private void ReflectionRunTestAsync(string path, string typeName, string methodName)
+            protected void ReflectionRunTestAsync(string path, string typeName, string methodName)
             {
                 var context = AssemblyLoadContext.GetLoadContext(Assembly.GetExecutingAssembly());
                 var assembly = context.LoadFromAssemblyPath(path);
@@ -132,21 +126,6 @@ namespace NI.TestUtilities
                 t.Start();
                 t.Join();
                 edi?.Throw();
-            }
-
-            private static void ThrowExceptionForCallingLoadContext(Exception e)
-            {
-                var conext = AssemblyLoadContext.GetLoadContext(typeof(AsyncTest).Assembly);
-                if (conext != AssemblyLoadContext.GetLoadContext(e.GetType().Assembly))
-                {
-                    using (var ms = new MemoryStream())
-                    {
-                        var f = new BinaryFormatter();
-                        f.Serialize(ms, e);
-                        e = (Exception)f.Deserialize(ms);
-                    }
-                }
-                ExceptionDispatchInfo.Capture(e).Throw();
             }
         }
     }
